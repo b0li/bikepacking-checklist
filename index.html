@@ -530,6 +530,54 @@
 		tripLevel: 0,
 	};
 
+	function mergeWithDefaults( savedCategories ) {
+
+		// Build lookup of default items by id
+		const defaultItemMap = {};
+
+		DEFAULT_CATEGORIES.forEach( cat => {
+			cat.items.forEach( item => {
+				defaultItemMap[item.id] = item;
+			});
+		});
+
+		// Track which ids exist in saved state
+		const savedItemIds = {};
+
+		savedCategories.forEach( cat => {
+			cat.items.forEach( item => {
+
+				savedItemIds[item.id] = true;
+
+				// Copy minTrip from default if missing
+				if ( item.minTrip === undefined && defaultItemMap[item.id] && defaultItemMap[item.id].minTrip !== undefined ) {
+					item.minTrip = defaultItemMap[item.id].minTrip;
+				}
+
+			});
+		});
+
+		// Add new default items not yet in saved state
+		DEFAULT_CATEGORIES.forEach( defaultCat => {
+
+			const savedCat = savedCategories.find( c => c.id === defaultCat.id );
+
+			if ( ! savedCat ) return;
+
+			defaultCat.items.forEach( defaultItem => {
+
+				if ( ! savedItemIds[defaultItem.id] ) {
+					savedCat.items.push( JSON.parse( JSON.stringify( defaultItem ) ) );
+				}
+
+			});
+
+		});
+
+		return savedCategories;
+
+	}
+
 	function loadState() {
 
 		try {
@@ -539,7 +587,7 @@
 			if ( raw ) {
 
 				const data = JSON.parse( raw );
-				if ( data.categories ) state.categories = data.categories;
+				if ( data.categories ) state.categories = mergeWithDefaults( data.categories );
 				if ( data.checked ) state.checked = data.checked;
 				if ( data.expanded ) state.expanded = data.expanded;
 				if ( typeof data.tripLevel === 'number' ) state.tripLevel = data.tripLevel;

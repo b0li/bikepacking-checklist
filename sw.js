@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bikepacking-v2';
+const CACHE_NAME = 'bikepacking-v3';
 const ASSETS = [
 	'./',
 	'./index.html',
