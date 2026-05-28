@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1d23">
+<meta name="description" content="Bikepacking Checklist — abhaken, einpacken, losfahren">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Bikepacking Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+
+	:root {
+		--bg: #1a1d23;
+		--surface: #22262e;
+		--surface-hover: #2a2f38;
+		--border: #2e3340;
+		--text: #e8e6e3;
+		--text-muted: #8b8d94;
+		--accent: #d4a55a;
+		--accent-dim: rgba(212, 165, 90, 0.15);
+		--green: #6abf69;
+		--green-dim: rgba(106, 191, 105, 0.12);
+		--red: #e06c6c;
+		--font-display: 'DM Serif Display', Georgia, serif;
+		--font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+		--radius: 10px;
+	}
+
+	* { box-sizing: border-box; margin: 0; padding: 0; }
+
+	body {
+		background: var(--bg);
+		font-family: var(--font-body);
+		color: var(--text);
+		min-height: 100vh;
+		min-height: 100dvh;
+		-webkit-font-smoothing: antialiased;
+		overscroll-behavior: none;
+	}
+
+	.header {
+		padding: 28px 20px 20px;
+		text-align: center;
+		border-bottom: 1px solid var(--border);
+		background: linear-gradient(180deg, rgba(212,165,90,0.06) 0%, transparent 100%);
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+	}
+
+	/* Safe area for notch devices */
+	@supports (padding-top: env(safe-area-inset-top)) {
+		.header { padding-top: calc(28px + env(safe-area-inset-top)); }
+	}
+
+	.header h1 {
+		font-family: var(--font-display);
+		font-size: 26px;
+		font-weight: 400;
+		letter-spacing: 0.5px;
+		color: var(--text);
+		margin-bottom: 4px;
+	}
+
+	.header .subtitle {
+		font-size: 13px;
+		color: var(--text-muted);
+		letter-spacing: 0.3px;
+	}
+
+	.progress-wrap {
+		padding: 16px 20px;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		position: sticky;
+		top: 78px;
+		z-index: 9;
+		background: var(--bg);
+	}
+
+	.progress-bar {
+		flex: 1;
+		height: 6px;
+		background: var(--border);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+
+	.progress-fill {
+		height: 100%;
+		background: var(--accent);
+		border-radius: 3px;
+		transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.progress-text {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--text-muted);
+		white-space: nowrap;
+		min-width: 52px;
+		text-align: right;
+	}
+
+	.all-done {
+		text-align: center;
+		padding: 24px 20px 8px;
+		font-size: 15px;
+		color: var(--green);
+		font-weight: 500;
+	}
+
+	.category {
+		margin: 0 12px 8px;
+		background: var(--surface);
+		border-radius: var(--radius);
+		border: 1px solid var(--border);
+		overflow: hidden;
+	}
+
+	.cat-header {
+		display: flex;
+		align-items: center;
+		padding: 14px 16px;
+		cursor: pointer;
+		user-select: none;
+		-webkit-user-select: none;
+		-webkit-tap-highlight-color: transparent;
+		gap: 10px;
+		transition: background 0.15s;
+	}
+
+	.cat-header:active { background: var(--surface-hover); }
+
+	.cat-icon { font-size: 20px; line-height: 1; }
+
+	.cat-title {
+		flex: 1;
+		font-size: 15px;
+		font-weight: 600;
+		letter-spacing: 0.2px;
+	}
+
+	.cat-badge {
+		font-size: 11px;
+		font-weight: 500;
+		padding: 2px 8px;
+		border-radius: 10px;
+		background: var(--accent-dim);
+		color: var(--accent);
+		transition: all 0.2s;
+	}
+
+	.cat-badge.done {
+		background: var(--green-dim);
+		color: var(--green);
+	}
+
+	.cat-chevron {
+		color: var(--text-muted);
+		font-size: 12px;
+		transition: transform 0.2s;
+	}
+
+	.cat-chevron.open { transform: rotate(90deg); }
+
+	.cat-body { display: none; }
+	.cat-body.open { display: block; }
+
+	.item-list { padding: 0 8px 4px; }
+
+	.item {
+		display: flex;
+		align-items: center;
+		padding: 10px 12px;
+		gap: 12px;
+		border-radius: 8px;
+		cursor: pointer;
+		user-select: none;
+		-webkit-user-select: none;
+		-webkit-tap-highlight-color: transparent;
+		transition: background 0.12s;
+	}
+
+	.item:active { background: var(--surface-hover); }
+
+	.checkbox {
+		width: 22px;
+		height: 22px;
+		border-radius: 6px;
+		border: 2px solid var(--border);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		transition: all 0.2s;
+	}
+
+	.checkbox.checked {
+		background: var(--green);
+		border-color: var(--green);
+	}
+
+	.checkbox svg { display: none; }
+	.checkbox.checked svg { display: block; }
+
+	.item-text {
+		flex: 1;
+		font-size: 14px;
+		line-height: 1.4;
+		transition: opacity 0.2s;
+	}
+
+	.item-text.done {
+		opacity: 0.4;
+		text-decoration: line-through;
+		text-decoration-color: var(--text-muted);
+	}
+
+	.item-delete {
+		opacity: 0;
+		color: var(--red);
+		font-size: 20px;
+		padding: 0 4px;
+		cursor: pointer;
+		background: none;
+		border: none;
+		line-height: 1;
+		transition: opacity 0.15s;
+	}
+
+	@media (hover: hover) {
+		.cat-header:hover { background: var(--surface-hover); }
+		.item:hover { background: var(--surface-hover); }
+		.item:hover .item-delete { opacity: 0.6; }
+		.item-delete:hover { opacity: 1 !important; }
+	}
+
+	@media (pointer: coarse) {
+		.item-delete { opacity: 0.35; }
+	}
+
+	.add-row {
+		display: flex;
+		align-items: center;
+		padding: 4px 12px 10px;
+		gap: 8px;
+	}
+
+	.add-btn {
+		font-size: 13px;
+		color: var(--accent);
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 6px 4px;
+		font-family: var(--font-body);
+		opacity: 0.7;
+		transition: opacity 0.15s;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.add-btn:hover { opacity: 1; }
+
+	.add-input {
+		flex: 1;
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 8px 10px;
+		font-size: 14px;
+		color: var(--text);
+		font-family: var(--font-body);
+		outline: none;
+	}
+
+	.add-input:focus { border-color: var(--accent); }
+
+	.add-confirm {
+		background: var(--accent);
+		color: var(--bg);
+		border: none;
+		border-radius: 6px;
+		padding: 8px 14px;
+		font-size: 15px;
+		font-weight: 600;
+		cursor: pointer;
+		font-family: var(--font-body);
+	}
+
+	.footer {
+		padding: 20px;
+		display: flex;
+		justify-content: center;
+		gap: 12px;
+		flex-wrap: wrap;
+	}
+
+	@supports (padding-bottom: env(safe-area-inset-bottom)) {
+		.footer { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+	}
+
+	.footer-btn {
+		background: none;
+		border: 1px solid var(--border);
+		color: var(--text-muted);
+		padding: 10px 20px;
+		border-radius: 8px;
+		font-size: 13px;
+		cursor: pointer;
+		font-family: var(--font-body);
+		transition: all 0.15s;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.footer-btn:hover,
+	.footer-btn:active {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
+	.footer-btn.danger:hover,
+	.footer-btn.danger:active {
+		border-color: var(--red);
+		color: var(--red);
+	}
+
+	.install-banner {
+		display: none;
+		margin: 12px;
+		padding: 14px 16px;
+		background: var(--accent-dim);
+		border: 1px solid rgba(212, 165, 90, 0.3);
+		border-radius: var(--radius);
+		font-size: 13px;
+		color: var(--accent);
+		text-align: center;
+		line-height: 1.5;
+	}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+	<h1>🚴 Bikepacking Checklist</h1>
+	<div class="subtitle">Abhaken, einpacken, losfahren</div>
+</div>
+
+<div id="installBanner" class="install-banner">
+	Tipp: Teilen → „Zum Home-Bildschirm" für App-Feeling + sichere Datenspeicherung
+</div>
+
+<div class="progress-wrap">
+	<div class="progress-bar">
+		<div class="progress-fill" id="progressFill"></div>
+	</div>
+	<div class="progress-text" id="progressText">0 / 0</div>
+</div>
+
+<div id="allDone" class="all-done" style="display:none">✅ Alles gepackt — viel Spaß auf Tour!</div>
+
+<div id="categoryList"></div>
+
+<div class="footer">
+	<button class="footer-btn danger" id="resetBtn">Haken zurücksetzen</button>
+	<button class="footer-btn" id="resetAllBtn">Alles zurücksetzen</button>
+</div>
+
+<script>
+
+	// Service Worker registration
+	if ( 'serviceWorker' in navigator ) {
+
+		navigator.serviceWorker.register( './sw.js' ).catch( ( err ) => {
+			console.log( 'SW registration failed:', err );
+		});
+
+	}
+
+	// Show install hint on iOS Safari (not in standalone mode)
+	if (
+		( 'standalone' in navigator && ! navigator.standalone ) &&
+		/iPhone|iPad/.test( navigator.userAgent )
+	) {
+
+		document.getElementById( 'installBanner' ).style.display = 'block';
+
+	}
+
+	const STORAGE_KEY = 'bikepacking-checklist';
+
+	const DEFAULT_CATEGORIES = [
+		{
+			id: 'bike', icon: '🔧', title: 'Bike & Werkzeug',
+			items: [
+				{ id: 'b1', text: 'Ersatzschlauch / Flickzeug / Reifenheber' },
+				{ id: 'b2', text: 'Mini-Pumpe oder CO2-Kartuschen' },
+				{ id: 'b3', text: 'Multitool' },
+				{ id: 'b4', text: 'Kettenschloss / Kettenöl' },
+				{ id: 'b5', text: 'Schloss' },
+				{ id: 'b6', text: 'Licht vorne + hinten' },
+				{ id: 'b7', text: 'Bikepacking-Taschen' },
+			],
+		},
+		{
+			id: 'camp', icon: '⛺', title: 'Zelt & Schlafen',
+			items: [
+				{ id: 'c1', text: 'Zelt' },
+				{ id: 'c2', text: 'Isomatte' },
+				{ id: 'c3', text: 'Schlafsack' },
+				{ id: 'c4', text: 'Kissen / Stuff-Sack' },
+			],
+		},
+		{
+			id: 'clothes', icon: '👕', title: 'Kleidung',
+			items: [
+				{ id: 'cl1', text: 'Radhose / Trägerhose' },
+				{ id: 'cl2', text: 'Radtrikot / Funktionsshirt' },
+				{ id: 'cl3', text: 'Windjacke' },
+				{ id: 'cl4', text: 'Lange Hose / Beinlinge für abends' },
+				{ id: 'cl5', text: 'Wechsel-Shirt' },
+				{ id: 'cl6', text: 'Unterwäsche / Socken' },
+				{ id: 'cl7', text: 'Camp-Schuhe (Flip-Flops)' },
+				{ id: 'cl8', text: 'Radhandschuhe' },
+				{ id: 'cl9', text: 'Helm' },
+				{ id: 'cl10', text: 'Sonnenbrille' },
+			],
+		},
+		{
+			id: 'food', icon: '🍳', title: 'Verpflegung & Kochen',
+			items: [
+				{ id: 'f1', text: 'Gaskocher + Kartusche' },
+				{ id: 'f2', text: 'Topf / Becher' },
+				{ id: 'f3', text: 'Besteck (Spork)' },
+				{ id: 'f4', text: 'Feuerzeug' },
+				{ id: 'f5', text: 'Wasserflaschen (min. 1,5L)' },
+				{ id: 'f6', text: 'Riegel / Snacks / Nüsse' },
+			],
+		},
+		{
+			id: 'hygiene', icon: '🧴', title: 'Hygiene & Schutz',
+			items: [
+				{ id: 'h1', text: 'Sonnencreme' },
+				{ id: 'h2', text: 'Zahnbürste / Zahnpasta' },
+				{ id: 'h3', text: 'Bio-Seife' },
+				{ id: 'h4', text: 'Mikrofaser-Handtuch' },
+				{ id: 'h5', text: 'Toilettenpapier + Tüte' },
+				{ id: 'h6', text: 'Insektenschutz' },
+			],
+		},
+		{
+			id: 'tech', icon: '📱', title: 'Navigation & Technik',
+			items: [
+				{ id: 't1', text: 'Handy + Ladekabel' },
+				{ id: 't2', text: 'Powerbank' },
+				{ id: 't3', text: 'Route offline geladen' },
+				{ id: 't4', text: 'Bargeld + Ausweis' },
+			],
+		},
+		{
+			id: 'misc', icon: '🎒', title: 'Sonstiges',
+			items: [
+				{ id: 'm1', text: 'Erste-Hilfe-Set' },
+				{ id: 'm2', text: 'Kabelbinder / Tape' },
+				{ id: 'm3', text: 'Müllbeutel' },
+				{ id: 'm4', text: 'Ohrenstöpsel' },
+			],
+		},
+	];
+
+	// State
+	let state = {
+		categories: JSON.parse( JSON.stringify( DEFAULT_CATEGORIES ) ),
+		checked: {},
+		expanded: {},
+	};
+
+	function loadState() {
+
+		try {
+
+			const raw = localStorage.getItem( STORAGE_KEY );
+
+			if ( raw ) {
+
+				const data = JSON.parse( raw );
+				if ( data.categories ) state.categories = data.categories;
+				if ( data.checked ) state.checked = data.checked;
+				if ( data.expanded ) state.expanded = data.expanded;
+
+			} else {
+
+				state.categories.forEach( c => state.expanded[c.id] = true );
+
+			}
+
+		} catch ( e ) {
+
+			state.categories.forEach( c => state.expanded[c.id] = true );
+
+		}
+
+	}
+
+	function saveState() {
+
+		try {
+
+			localStorage.setItem( STORAGE_KEY, JSON.stringify( {
+				categories: state.categories,
+				checked: state.checked,
+				expanded: state.expanded,
+			}));
+
+		} catch ( e ) {
+			console.error( 'Save failed:', e );
+		}
+
+	}
+
+	function updateProgress() {
+
+		let total = 0;
+		let done = 0;
+
+		state.categories.forEach( cat => {
+
+			cat.items.forEach( item => {
+
+				total++;
+				if ( state.checked[item.id] ) done++;
+
+			});
+
+		});
+
+		const pct = total > 0 ? ( done / total ) * 100 : 0;
+
+		document.getElementById( 'progressFill' ).style.width = pct + '%';
+		document.getElementById( 'progressText' ).textContent = done + ' / ' + total;
+		document.getElementById( 'allDone' ).style.display = pct === 100 ? 'block' : 'none';
+
+	}
+
+	function render() {
+
+		const container = document.getElementById( 'categoryList' );
+		container.innerHTML = '';
+
+		state.categories.forEach( cat => {
+
+			const catChecked = cat.items.filter( i => state.checked[i.id] ).length;
+			const catDone = catChecked === cat.items.length && cat.items.length > 0;
+			const isOpen = state.expanded[cat.id];
+
+			const catEl = document.createElement( 'div' );
+			catEl.className = 'category';
+
+			const header = document.createElement( 'div' );
+			header.className = 'cat-header';
+			header.innerHTML = `
+				<span class="cat-icon">${cat.icon}</span>
+				<span class="cat-title">${cat.title}</span>
+				<span class="cat-badge${catDone ? ' done' : ''}">${catChecked}/${cat.items.length}</span>
+				<span class="cat-chevron${isOpen ? ' open' : ''}">▶</span>
+			`;
+
+			header.addEventListener( 'click', () => {
+
+				state.expanded[cat.id] = ! state.expanded[cat.id];
+				saveState();
+				render();
+
+			});
+
+			catEl.appendChild( header );
+
+			const body = document.createElement( 'div' );
+			body.className = 'cat-body' + ( isOpen ? ' open' : '' );
+
+			const list = document.createElement( 'div' );
+			list.className = 'item-list';
+
+			cat.items.forEach( item => {
+
+				const row = document.createElement( 'div' );
+				row.className = 'item';
+
+				const isChecked = state.checked[item.id];
+
+				row.innerHTML = `
+					<div class="checkbox${isChecked ? ' checked' : ''}">
+						<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+							<path d="M3 7.5L5.5 10L11 4" stroke="#1a1d23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
+					</div>
+					<span class="item-text${isChecked ? ' done' : ''}">${item.text}</span>
+					<button class="item-delete" aria-label="Löschen">×</button>
+				`;
+
+				row.addEventListener( 'click', ( e ) => {
+
+					if ( e.target.closest( '.item-delete' ) ) return;
+					state.checked[item.id] = ! state.checked[item.id];
+					saveState();
+					render();
+
+				});
+
+				row.querySelector( '.item-delete' ).addEventListener( 'click', ( e ) => {
+
+					e.stopPropagation();
+					cat.items = cat.items.filter( i => i.id !== item.id );
+					delete state.checked[item.id];
+					saveState();
+					render();
+
+				});
+
+				list.appendChild( row );
+
+			});
+
+			body.appendChild( list );
+
+			// Add item row
+			const addRow = document.createElement( 'div' );
+			addRow.className = 'add-row';
+
+			const addBtn = document.createElement( 'button' );
+			addBtn.className = 'add-btn';
+			addBtn.textContent = '+ Hinzufügen';
+
+			addBtn.addEventListener( 'click', () => {
+
+				addRow.innerHTML = '';
+
+				const input = document.createElement( 'input' );
+				input.className = 'add-input';
+				input.type = 'text';
+				input.placeholder = 'Neuer Eintrag...';
+
+				const confirm = document.createElement( 'button' );
+				confirm.className = 'add-confirm';
+				confirm.textContent = '+';
+
+				const doAdd = () => {
+
+					const val = input.value.trim();
+
+					if ( val ) {
+
+						cat.items.push( { id: 'custom-' + Date.now(), text: val } );
+						saveState();
+						render();
+
+					}
+
+				};
+
+				input.addEventListener( 'keydown', ( e ) => {
+
+					if ( e.key === 'Enter' ) doAdd();
+
+				});
+
+				confirm.addEventListener( 'click', doAdd );
+
+				addRow.appendChild( input );
+				addRow.appendChild( confirm );
+
+				setTimeout( () => input.focus(), 50 );
+
+			});
+
+			addRow.appendChild( addBtn );
+			body.appendChild( addRow );
+
+			catEl.appendChild( body );
+			container.appendChild( catEl );
+
+		});
+
+		updateProgress();
+
+	}
+
+	// Reset checks only
+	document.getElementById( 'resetBtn' ).addEventListener( 'click', () => {
+
+		if ( ! confirm( 'Alle Haken zurücksetzen?' ) ) return;
+
+		state.checked = {};
+		state.categories.forEach( c => state.expanded[c.id] = true );
+		saveState();
+		render();
+
+	});
+
+	// Full reset including custom items
+	document.getElementById( 'resetAllBtn' ).addEventListener( 'click', () => {
+
+		if ( ! confirm( 'Komplett zurücksetzen? Eigene Einträge gehen verloren.' ) ) return;
+
+		state.categories = JSON.parse( JSON.stringify( DEFAULT_CATEGORIES ) );
+		state.checked = {};
+		state.categories.forEach( c => state.expanded[c.id] = true );
+		saveState();
+		render();
+
+	});
+
+	// Init
+	loadState();
+	render();
+
+</script>
+
+</body>
+</html>
