@@ -346,6 +346,36 @@
 		line-height: 1.5;
 	}
 
+	.trip-selector {
+		display: flex;
+		gap: 8px;
+		padding: 12px 12px 4px;
+	}
+
+	.trip-btn {
+		flex: 1;
+		padding: 8px 4px;
+		border-radius: 8px;
+		border: 1px solid var(--border);
+		background: var(--surface);
+		color: var(--text-muted);
+		font-family: var(--font-body);
+		font-size: 12px;
+		font-weight: 500;
+		cursor: pointer;
+		text-align: center;
+		transition: all 0.15s;
+		-webkit-tap-highlight-color: transparent;
+		white-space: nowrap;
+	}
+
+	.trip-btn.active {
+		background: var(--accent-dim);
+		border-color: var(--accent);
+		color: var(--accent);
+		font-weight: 600;
+	}
+
 </style>
 </head>
 <body>
@@ -358,6 +388,8 @@
 <div id="installBanner" class="install-banner">
 	Tipp: Teilen → „Zum Home-Bildschirm" für App-Feeling + sichere Datenspeicherung
 </div>
+
+<div class="trip-selector" id="tripSelector"></div>
 
 <div class="progress-wrap">
 	<div class="progress-bar">
@@ -398,6 +430,13 @@
 
 	const STORAGE_KEY = 'bikepacking-checklist';
 
+	const TRIP_TYPES = [
+		{ id: 'overnighter', label: 'Overnighter', level: 0 },
+		{ id: 'weekend',     label: 'Wochenende',  level: 1 },
+		{ id: 'week',        label: '4–7 Tage',    level: 2 },
+		{ id: 'longtrip',    label: '2 Wochen+',   level: 3 },
+	];
+
 	const DEFAULT_CATEGORIES = [
 		{
 			id: 'bike', icon: '🔧', title: 'Bike & Werkzeug',
@@ -409,6 +448,8 @@
 				{ id: 'b5', text: 'Schloss' },
 				{ id: 'b6', text: 'Licht vorne + hinten' },
 				{ id: 'b7', text: 'Bikepacking-Taschen' },
+			{ id: 'b8', text: 'Ersatzbremsbeläge', minTrip: 2 },
+			{ id: 'b9', text: 'Ersatzschaltauge + Ersatzspeichen', minTrip: 3 },
 			],
 		},
 		{
@@ -426,13 +467,15 @@
 				{ id: 'cl1', text: 'Radhose / Trägerhose' },
 				{ id: 'cl2', text: 'Radtrikot / Funktionsshirt' },
 				{ id: 'cl3', text: 'Windjacke' },
-				{ id: 'cl4', text: 'Lange Hose / Beinlinge für abends' },
+				{ id: 'cl4', text: 'Lange Hose / Beinlinge für abends', minTrip: 1 },
 				{ id: 'cl5', text: 'Wechsel-Shirt' },
 				{ id: 'cl6', text: 'Unterwäsche / Socken' },
 				{ id: 'cl7', text: 'Camp-Schuhe (Flip-Flops)' },
 				{ id: 'cl8', text: 'Radhandschuhe' },
 				{ id: 'cl9', text: 'Helm' },
 				{ id: 'cl10', text: 'Sonnenbrille' },
+				{ id: 'cl11', text: '2. Wechsel-Garnitur (Shirt + Unterwäsche + Socken)', minTrip: 2 },
+				{ id: 'cl12', text: 'Regenjacke / Regenhose', minTrip: 1 },
 			],
 		},
 		{
@@ -464,6 +507,7 @@
 				{ id: 't2', text: 'Powerbank' },
 				{ id: 't3', text: 'Route offline geladen' },
 				{ id: 't4', text: 'Bargeld + Ausweis' },
+				{ id: 't5', text: 'Solar-Ladegerät / 2. Powerbank', minTrip: 3 },
 			],
 		},
 		{
@@ -473,6 +517,7 @@
 				{ id: 'm2', text: 'Kabelbinder / Tape' },
 				{ id: 'm3', text: 'Müllbeutel' },
 				{ id: 'm4', text: 'Ohrenstöpsel' },
+				{ id: 'm5', text: 'Erweiterte Reiseapotheke (Blasenpflaster, Schmerzmittel)', minTrip: 1 },
 			],
 		},
 	];
@@ -482,6 +527,7 @@
 		categories: JSON.parse( JSON.stringify( DEFAULT_CATEGORIES ) ),
 		checked: {},
 		expanded: {},
+		tripLevel: 0,
 	};
 
 	function loadState() {
@@ -496,6 +542,7 @@
 				if ( data.categories ) state.categories = data.categories;
 				if ( data.checked ) state.checked = data.checked;
 				if ( data.expanded ) state.expanded = data.expanded;
+				if ( typeof data.tripLevel === 'number' ) state.tripLevel = data.tripLevel;
 
 			} else {
 
@@ -519,12 +566,17 @@
 				categories: state.categories,
 				checked: state.checked,
 				expanded: state.expanded,
+				tripLevel: state.tripLevel,
 			}));
 
 		} catch ( e ) {
 			console.error( 'Save failed:', e );
 		}
 
+	}
+
+	function visibleItems( cat ) {
+		return cat.items.filter( item => ( item.minTrip || 0 ) <= state.tripLevel );
 	}
 
 	function updateProgress() {
@@ -534,7 +586,7 @@
 
 		state.categories.forEach( cat => {
 
-			cat.items.forEach( item => {
+			visibleItems( cat ).forEach( item => {
 
 				total++;
 				if ( state.checked[item.id] ) done++;
@@ -551,6 +603,32 @@
 
 	}
 
+	function renderTripSelector() {
+
+		const container = document.getElementById( 'tripSelector' );
+		container.innerHTML = '';
+
+		TRIP_TYPES.forEach( trip => {
+
+			const btn = document.createElement( 'button' );
+			btn.className = 'trip-btn' + ( trip.level === state.tripLevel ? ' active' : '' );
+			btn.textContent = trip.label;
+
+			btn.addEventListener( 'click', () => {
+
+				state.tripLevel = trip.level;
+				saveState();
+				renderTripSelector();
+				render();
+
+			});
+
+			container.appendChild( btn );
+
+		});
+
+	}
+
 	function render() {
 
 		const container = document.getElementById( 'categoryList' );
@@ -558,8 +636,9 @@
 
 		state.categories.forEach( cat => {
 
-			const catChecked = cat.items.filter( i => state.checked[i.id] ).length;
-			const catDone = catChecked === cat.items.length && cat.items.length > 0;
+			const items = visibleItems( cat );
+			const catChecked = items.filter( i => state.checked[i.id] ).length;
+			const catDone = catChecked === items.length && items.length > 0;
 			const isOpen = state.expanded[cat.id];
 
 			const catEl = document.createElement( 'div' );
@@ -570,7 +649,7 @@
 			header.innerHTML = `
 				<span class="cat-icon">${cat.icon}</span>
 				<span class="cat-title">${cat.title}</span>
-				<span class="cat-badge${catDone ? ' done' : ''}">${catChecked}/${cat.items.length}</span>
+				<span class="cat-badge${catDone ? ' done' : ''}">${catChecked}/${items.length}</span>
 				<span class="cat-chevron${isOpen ? ' open' : ''}">▶</span>
 			`;
 
@@ -590,7 +669,7 @@
 			const list = document.createElement( 'div' );
 			list.className = 'item-list';
 
-			cat.items.forEach( item => {
+			items.forEach( item => {
 
 				const row = document.createElement( 'div' );
 				row.className = 'item';
@@ -721,6 +800,7 @@
 
 	// Init
 	loadState();
+	renderTripSelector();
 	render();
 
 </script>
