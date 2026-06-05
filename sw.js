@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bikepacking-v3';
+const CACHE_NAME = 'bikepacking-v4';
 const ASSETS = [
 	'./',
 	'./index.html',
@@ -31,14 +31,19 @@ self.addEventListener( 'activate', ( e ) => {
 
 });
 
-// Fetch: cache-first, fallback to network
+// Fetch: network-first for HTML, cache-first for assets
 self.addEventListener( 'fetch', ( e ) => {
 
-	e.respondWith(
-		caches.match( e.request ).then( ( cached ) => {
-			return cached || fetch( e.request ).then( ( response ) => {
+	const isHtml = e.request.destination === 'document' ||
+		e.request.url.endsWith( '.html' ) ||
+		e.request.url.endsWith( '/' );
 
-				// Cache new successful requests
+	if ( isHtml ) {
+
+		// Always try network first so updates are picked up immediately
+		e.respondWith(
+			fetch( e.request ).then( ( response ) => {
+
 				if ( response.status === 200 ) {
 
 					const clone = response.clone();
@@ -48,13 +53,38 @@ self.addEventListener( 'fetch', ( e ) => {
 
 				return response;
 
-			});
-		}).catch( () => {
+			}).catch( () => {
 
-			// Offline fallback
-			return caches.match( './index.html' );
+				// Offline fallback: serve cached HTML
+				return caches.match( e.request ) || caches.match( './index.html' );
 
-		})
-	);
+			})
+		);
+
+	} else {
+
+		// Cache-first for icons, manifest etc.
+		e.respondWith(
+			caches.match( e.request ).then( ( cached ) => {
+
+				return cached || fetch( e.request ).then( ( response ) => {
+
+					if ( response.status === 200 ) {
+
+						const clone = response.clone();
+						caches.open( CACHE_NAME ).then( ( cache ) => cache.put( e.request, clone ) );
+
+					}
+
+					return response;
+
+				});
+
+			}).catch( () => {
+				return caches.match( './index.html' );
+			})
+		);
+
+	}
 
 });
