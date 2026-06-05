@@ -62,10 +62,10 @@
 
 	.header h1 {
 		font-family: var(--font-display);
-		font-size: 26px;
+		font-size: 28px;
 		font-weight: 400;
 		letter-spacing: 0.5px;
-		color: var(--text);
+		color: var(--accent);
 		margin-bottom: 4px;
 	}
 
@@ -140,9 +140,7 @@
 
 	.cat-header:active { background: var(--surface-hover); }
 
-	.cat-icon { font-size: 20px; line-height: 1; }
-
-	.cat-title {
+.cat-title {
 		flex: 1;
 		font-size: 15px;
 		font-weight: 600;
@@ -381,7 +379,7 @@
 <body>
 
 <div class="header">
-	<h1>🚴 Bikepacking Checklist</h1>
+	<h1>Bikepacking Checklist</h1>
 	<div class="subtitle">Abhaken, einpacken, losfahren</div>
 </div>
 
@@ -695,7 +693,6 @@
 			const header = document.createElement( 'div' );
 			header.className = 'cat-header';
 			header.innerHTML = `
-				<span class="cat-icon">${cat.icon}</span>
 				<span class="cat-title">${cat.title}</span>
 				<span class="cat-badge${catDone ? ' done' : ''}">${catChecked}/${items.length}</span>
 				<span class="cat-chevron${isOpen ? ' open' : ''}">▶</span>
