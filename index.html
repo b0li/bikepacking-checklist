@@ -388,6 +388,7 @@
 </div>
 
 <div class="trip-selector" id="tripSelector"></div>
+<div class="trip-selector" id="accoSelector"></div>
 
 <div class="progress-wrap">
 	<div class="progress-bar">
@@ -440,6 +441,11 @@
 		{ id: 'longtrip',    label: '2 Wochen+',   level: 3 },
 	];
 
+	const ACCO_TYPES = [
+		{ id: 'camp',  label: 'Zelten / Biwak' },
+		{ id: 'hotel', label: 'Hotel / Airbnb' },
+	];
+
 	const DEFAULT_CATEGORIES = [
 		{
 			id: 'bike', icon: '🔧', title: 'Bike & Werkzeug',
@@ -458,10 +464,10 @@
 		{
 			id: 'camp', icon: '⛺', title: 'Zelt & Schlafen',
 			items: [
-				{ id: 'c1', text: 'Zelt' },
-				{ id: 'c2', text: 'Isomatte' },
-				{ id: 'c3', text: 'Schlafsack' },
-				{ id: 'c4', text: 'Kissen / Stuff-Sack' },
+				{ id: 'c1', text: 'Zelt', camping: true },
+				{ id: 'c2', text: 'Isomatte', camping: true },
+				{ id: 'c3', text: 'Schlafsack', camping: true },
+				{ id: 'c4', text: 'Kissen / Stuff-Sack', camping: true },
 			],
 		},
 		{
@@ -484,10 +490,10 @@
 		{
 			id: 'food', icon: '🍳', title: 'Verpflegung & Kochen',
 			items: [
-				{ id: 'f1', text: 'Gaskocher + Kartusche' },
-				{ id: 'f2', text: 'Topf / Becher' },
-				{ id: 'f3', text: 'Besteck (Spork)' },
-				{ id: 'f4', text: 'Feuerzeug' },
+				{ id: 'f1', text: 'Gaskocher + Kartusche', camping: true },
+				{ id: 'f2', text: 'Topf / Becher', camping: true },
+				{ id: 'f3', text: 'Besteck (Spork)', camping: true },
+				{ id: 'f4', text: 'Feuerzeug', camping: true },
 				{ id: 'f5', text: 'Wasserflaschen (min. 1,5L)' },
 				{ id: 'f6', text: 'Riegel / Snacks / Nüsse' },
 			],
@@ -497,9 +503,9 @@
 			items: [
 				{ id: 'h1', text: 'Sonnencreme' },
 				{ id: 'h2', text: 'Zahnbürste / Zahnpasta' },
-				{ id: 'h3', text: 'Bio-Seife' },
-				{ id: 'h4', text: 'Mikrofaser-Handtuch' },
-				{ id: 'h5', text: 'Toilettenpapier + Tüte' },
+				{ id: 'h3', text: 'Bio-Seife', camping: true },
+				{ id: 'h4', text: 'Mikrofaser-Handtuch', camping: true },
+				{ id: 'h5', text: 'Toilettenpapier + Tüte', camping: true },
 				{ id: 'h6', text: 'Insektenschutz' },
 			],
 		},
@@ -531,6 +537,7 @@
 		checked: {},
 		expanded: {},
 		tripLevel: 0,
+		accoType: 'camp',
 	};
 
 	function mergeWithDefaults( savedCategories ) {
@@ -555,6 +562,11 @@
 				// Copy minTrip from default if missing
 				if ( item.minTrip === undefined && defaultItemMap[item.id] && defaultItemMap[item.id].minTrip !== undefined ) {
 					item.minTrip = defaultItemMap[item.id].minTrip;
+				}
+
+				// Copy camping flag from default if missing
+				if ( item.camping === undefined && defaultItemMap[item.id] && defaultItemMap[item.id].camping ) {
+					item.camping = defaultItemMap[item.id].camping;
 				}
 
 			});
@@ -594,6 +606,7 @@
 				if ( data.checked ) state.checked = data.checked;
 				if ( data.expanded ) state.expanded = data.expanded;
 				if ( typeof data.tripLevel === 'number' ) state.tripLevel = data.tripLevel;
+				if ( data.accoType ) state.accoType = data.accoType;
 
 			} else {
 
@@ -618,6 +631,7 @@
 				checked: state.checked,
 				expanded: state.expanded,
 				tripLevel: state.tripLevel,
+				accoType: state.accoType,
 			}));
 
 		} catch ( e ) {
@@ -627,7 +641,11 @@
 	}
 
 	function visibleItems( cat ) {
-		return cat.items.filter( item => ( item.minTrip || 0 ) <= state.tripLevel );
+		return cat.items.filter( item => {
+			if ( ( item.minTrip || 0 ) > state.tripLevel ) return false;
+			if ( item.camping && state.accoType === 'hotel' ) return false;
+			return true;
+		});
 	}
 
 	function updateProgress() {
@@ -670,6 +688,32 @@
 				state.tripLevel = trip.level;
 				saveState();
 				renderTripSelector();
+				render();
+
+			});
+
+			container.appendChild( btn );
+
+		});
+
+	}
+
+	function renderAccoSelector() {
+
+		const container = document.getElementById( 'accoSelector' );
+		container.innerHTML = '';
+
+		ACCO_TYPES.forEach( acco => {
+
+			const btn = document.createElement( 'button' );
+			btn.className = 'trip-btn' + ( acco.id === state.accoType ? ' active' : '' );
+			btn.textContent = acco.label;
+
+			btn.addEventListener( 'click', () => {
+
+				state.accoType = acco.id;
+				saveState();
+				renderAccoSelector();
 				render();
 
 			});
@@ -851,6 +895,7 @@
 	// Init
 	loadState();
 	renderTripSelector();
+	renderAccoSelector();
 	render();
 
 </script>
