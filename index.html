@@ -41,6 +41,7 @@
 		min-height: 100dvh;
 		-webkit-font-smoothing: antialiased;
 		overscroll-behavior: none;
+		overflow-x: hidden;
 	}
 
 	.header {
@@ -407,6 +408,27 @@
 		color: var(--accent);
 		font-weight: 600;
 	}
+
+	@keyframes slideOutLeft {
+		from { transform: translateX(0); opacity: 1; }
+		to   { transform: translateX(-40px); opacity: 0; }
+	}
+	@keyframes slideOutRight {
+		from { transform: translateX(0); opacity: 1; }
+		to   { transform: translateX(40px); opacity: 0; }
+	}
+	@keyframes slideInFromRight {
+		from { transform: translateX(40px); opacity: 0; }
+		to   { transform: translateX(0); opacity: 1; }
+	}
+	@keyframes slideInFromLeft {
+		from { transform: translateX(-40px); opacity: 0; }
+		to   { transform: translateX(0); opacity: 1; }
+	}
+	.lang-slide-out-left  { animation: slideOutLeft     0.18s ease-in  forwards; pointer-events: none; }
+	.lang-slide-out-right { animation: slideOutRight    0.18s ease-in  forwards; pointer-events: none; }
+	.lang-slide-in-right  { animation: slideInFromRight 0.22s ease-out forwards; }
+	.lang-slide-in-left   { animation: slideInFromLeft  0.22s ease-out forwards; }
 
 </style>
 </head>
@@ -1065,14 +1087,30 @@
 	document.getElementById( 'langSwitch' ).addEventListener( 'click', ( e ) => {
 
 		const btn = e.target.closest( '.lang-btn' );
-		if ( ! btn ) return;
+		if ( ! btn || btn.dataset.lang === state.lang ) return;
 
-		state.lang = btn.dataset.lang;
-		saveState();
-		applyLang();
-		renderTripSelector();
-		renderAccoSelector();
-		render();
+		const newLang = btn.dataset.lang;
+		const toRight = newLang === 'de'; // EN→DE slides right, DE→EN slides left
+		const list = document.getElementById( 'categoryList' );
+
+		list.classList.add( toRight ? 'lang-slide-out-right' : 'lang-slide-out-left' );
+
+		setTimeout( () => {
+
+			list.classList.remove( 'lang-slide-out-left', 'lang-slide-out-right' );
+			state.lang = newLang;
+			saveState();
+			applyLang();
+			renderTripSelector();
+			renderAccoSelector();
+			render();
+			list.classList.add( toRight ? 'lang-slide-in-left' : 'lang-slide-in-right' );
+
+			list.addEventListener( 'animationend', () => {
+				list.classList.remove( 'lang-slide-in-left', 'lang-slide-in-right' );
+			}, { once: true });
+
+		}, 180 );
 
 	});
 
