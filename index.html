@@ -106,8 +106,21 @@
 	}
 
 	.lang-btn.active {
-		background: var(--accent);
+		background: none;
 		color: var(--bg);
+		position: relative;
+		z-index: 1;
+	}
+
+	#langPill {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		height: calc(100% - 4px);
+		background: var(--accent);
+		border-radius: 6px;
+		pointer-events: none;
+		transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
 	.progress-wrap {
@@ -436,6 +449,7 @@
 
 <div class="header">
 	<div class="lang-switch" id="langSwitch">
+		<span id="langPill"></span>
 		<button class="lang-btn" data-lang="de">DE</button>
 		<button class="lang-btn" data-lang="en">EN</button>
 	</div>
@@ -850,6 +864,20 @@
 		document.querySelectorAll( '.lang-btn' ).forEach( btn => {
 			btn.classList.toggle( 'active', btn.dataset.lang === state.lang );
 		});
+
+		updateLangPill();
+
+	}
+
+	function updateLangPill() {
+
+		const pill = document.getElementById( 'langPill' );
+		const activeBtn = document.querySelector( '.lang-btn[data-lang="' + state.lang + '"]' );
+
+		if ( ! pill || ! activeBtn ) return;
+
+		pill.style.width = activeBtn.offsetWidth + 'px';
+		pill.style.transform = 'translateX(' + ( activeBtn.offsetLeft - 2 ) + 'px)';
 
 	}
 
