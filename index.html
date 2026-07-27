@@ -58,6 +58,7 @@
 	/* Safe area for notch devices */
 	@supports (padding-top: env(safe-area-inset-top)) {
 		.header { padding-top: calc(28px + env(safe-area-inset-top)); }
+		.lang-switch { top: calc(14px + env(safe-area-inset-top)); }
 	}
 
 	.header h1 {
@@ -73,6 +74,38 @@
 		font-size: 13px;
 		color: var(--text-muted);
 		letter-spacing: 0.3px;
+	}
+
+	.lang-switch {
+		position: absolute;
+		top: 14px;
+		right: 14px;
+		display: flex;
+		gap: 2px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 2px;
+	}
+
+	.lang-btn {
+		background: none;
+		border: none;
+		color: var(--text-muted);
+		font-family: var(--font-body);
+		font-size: 11px;
+		font-weight: 600;
+		padding: 4px 8px;
+		border-radius: 6px;
+		cursor: pointer;
+		letter-spacing: 0.5px;
+		transition: all 0.15s;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.lang-btn.active {
+		background: var(--accent);
+		color: var(--bg);
 	}
 
 	.progress-wrap {
@@ -379,13 +412,15 @@
 <body>
 
 <div class="header">
+	<div class="lang-switch" id="langSwitch">
+		<button class="lang-btn" data-lang="de">DE</button>
+		<button class="lang-btn" data-lang="en">EN</button>
+	</div>
 	<h1>Bikepacking Checklist</h1>
-	<div class="subtitle">Abhaken, einpacken, losfahren</div>
+	<div class="subtitle" id="appSubtitle"></div>
 </div>
 
-<div id="installBanner" class="install-banner">
-	Tipp: Teilen → „Zum Home-Bildschirm" für App-Feeling + sichere Datenspeicherung
-</div>
+<div id="installBanner" class="install-banner"></div>
 
 <div class="trip-selector" id="tripSelector"></div>
 <div class="trip-selector" id="accoSelector"></div>
@@ -397,13 +432,13 @@
 	<div class="progress-text" id="progressText">0 / 0</div>
 </div>
 
-<div id="allDone" class="all-done" style="display:none">✅ Alles gepackt — viel Spaß auf Tour!</div>
+<div id="allDone" class="all-done" style="display:none"></div>
 
 <div id="categoryList"></div>
 
 <div class="footer">
-	<button class="footer-btn danger" id="resetBtn">Haken zurücksetzen</button>
-	<button class="footer-btn" id="resetAllBtn">Alles zurücksetzen</button>
+	<button class="footer-btn danger" id="resetBtn"></button>
+	<button class="footer-btn" id="resetAllBtn"></button>
 </div>
 
 <script>
@@ -434,16 +469,137 @@
 
 	const STORAGE_KEY = 'bikepacking-checklist';
 
+	// i18n
+
+	const I18N = {
+
+		de: {
+			subtitle:         'Abhaken, einpacken, losfahren',
+			installHint:      'Tipp: Teilen → „Zum Home-Bildschirm" für App-Feeling + sichere Datenspeicherung',
+			allDone:          '✅ Alles gepackt — viel Spaß auf Tour!',
+			resetChecks:      'Haken zurücksetzen',
+			resetAll:         'Alles zurücksetzen',
+			addBtn:           '+ Hinzufügen',
+			addPlaceholder:   'Neuer Eintrag...',
+			deleteLabel:      'Löschen',
+			confirmReset:     'Alle Haken zurücksetzen?',
+			confirmResetAll:  'Komplett zurücksetzen? Eigene Einträge gehen verloren.',
+			tripTypes: {
+				overnighter: 'Overnighter',
+				weekend:     'Wochenende',
+				week:        '4–7 Tage',
+				longtrip:    '2 Wochen+',
+			},
+			accoTypes: {
+				camp:  'Zelten / Biwak',
+				hotel: 'Hotel / Airbnb',
+			},
+			categories: {
+				bike:    'Bike & Werkzeug',
+				camp:    'Zelt & Schlafen',
+				clothes: 'Kleidung',
+				food:    'Verpflegung & Kochen',
+				hygiene: 'Hygiene & Schutz',
+				tech:    'Navigation & Technik',
+				misc:    'Sonstiges',
+			},
+		},
+
+		en: {
+			subtitle:         'Check, pack, ride',
+			installHint:      'Tip: Share → "Add to Home Screen" for app feel + safe data storage',
+			allDone:          '✅ All packed — have a great ride!',
+			resetChecks:      'Reset checks',
+			resetAll:         'Reset all',
+			addBtn:           '+ Add',
+			addPlaceholder:   'New item...',
+			deleteLabel:      'Delete',
+			confirmReset:     'Reset all checks?',
+			confirmResetAll:  'Reset everything? Custom items will be lost.',
+			tripTypes: {
+				overnighter: 'Overnighter',
+				weekend:     'Weekend',
+				week:        '4–7 Days',
+				longtrip:    '2 Weeks+',
+			},
+			accoTypes: {
+				camp:  'Camping / Bivouac',
+				hotel: 'Hotel / Airbnb',
+			},
+			categories: {
+				bike:    'Bike & Tools',
+				camp:    'Tent & Sleeping',
+				clothes: 'Clothing',
+				food:    'Food & Cooking',
+				hygiene: 'Hygiene & Protection',
+				tech:    'Navigation & Tech',
+				misc:    'Miscellaneous',
+			},
+		},
+
+	};
+
+	// English item translations (keyed by item id)
+	const ITEMS_EN = {
+		b1:  'Spare tube / patch kit / tire levers',
+		b2:  'Mini pump or CO2 cartridges',
+		b3:  'Multi-tool',
+		b4:  'Quick link / chain lube',
+		b5:  'Bike lock',
+		b6:  'Front + rear lights',
+		b7:  'Bikepacking bags',
+		b8:  'Spare brake pads',
+		b9:  'Derailleur hanger + spare spokes',
+		c1:  'Tent',
+		c2:  'Sleeping mat',
+		c3:  'Sleeping bag',
+		c4:  'Pillow / stuff sack',
+		cl1: 'Cycling shorts / bib shorts',
+		cl2: 'Cycling jersey / base layer',
+		cl3: 'Wind jacket',
+		cl4: 'Long trousers / leg warmers for evenings',
+		cl5: 'Change of shirt',
+		cl6: 'Underwear / socks',
+		cl7: 'Camp shoes (flip-flops)',
+		cl8: 'Cycling gloves',
+		cl9: 'Helmet',
+		cl10: 'Sunglasses',
+		cl11: '2nd change of clothes (shirt + underwear + socks)',
+		cl12: 'Rain jacket / rain trousers',
+		f1:  'Gas stove + cartridge',
+		f2:  'Pot / mug',
+		f3:  'Cutlery (spork)',
+		f4:  'Lighter',
+		f5:  'Water bottles (min. 1.5L)',
+		f6:  'Energy bars / snacks / nuts',
+		h1:  'Sun cream',
+		h2:  'Toothbrush / toothpaste',
+		h3:  'Biodegradable soap',
+		h4:  'Microfibre towel',
+		h5:  'Toilet paper + bag',
+		h6:  'Insect repellent',
+		t1:  'Phone + charging cable',
+		t2:  'Power bank',
+		t3:  'Route downloaded offline',
+		t4:  'Cash + ID',
+		t5:  'Solar charger / 2nd power bank',
+		m1:  'First aid kit',
+		m2:  'Cable ties / tape',
+		m3:  'Rubbish bag',
+		m4:  'Earplugs',
+		m5:  'Extended travel pharmacy (blister plasters, painkillers)',
+	};
+
 	const TRIP_TYPES = [
-		{ id: 'overnighter', label: 'Overnighter', level: 0 },
-		{ id: 'weekend',     label: 'Wochenende',  level: 1 },
-		{ id: 'week',        label: '4–7 Tage',    level: 2 },
-		{ id: 'longtrip',    label: '2 Wochen+',   level: 3 },
+		{ id: 'overnighter', level: 0 },
+		{ id: 'weekend',     level: 1 },
+		{ id: 'week',        level: 2 },
+		{ id: 'longtrip',    level: 3 },
 	];
 
 	const ACCO_TYPES = [
-		{ id: 'camp',  label: 'Zelten / Biwak' },
-		{ id: 'hotel', label: 'Hotel / Airbnb' },
+		{ id: 'camp' },
+		{ id: 'hotel' },
 	];
 
 	const DEFAULT_CATEGORIES = [
@@ -538,7 +694,22 @@
 		expanded: {},
 		tripLevel: 0,
 		accoType: 'camp',
+		lang: detectLang(),
 	};
+
+	function detectLang() {
+		const lang = ( navigator.language || 'de' ).slice( 0, 2 ).toLowerCase();
+		return lang === 'en' ? 'en' : 'de';
+	}
+
+	function getItemText( item ) {
+		if ( state.lang === 'en' && ITEMS_EN[item.id] ) return ITEMS_EN[item.id];
+		return item.text;
+	}
+
+	function getCatTitle( cat ) {
+		return I18N[state.lang].categories[cat.id] || cat.title;
+	}
 
 	function mergeWithDefaults( savedCategories ) {
 
@@ -607,6 +778,7 @@
 				if ( data.expanded ) state.expanded = data.expanded;
 				if ( typeof data.tripLevel === 'number' ) state.tripLevel = data.tripLevel;
 				if ( data.accoType ) state.accoType = data.accoType;
+				if ( data.lang ) state.lang = data.lang;
 
 			} else {
 
@@ -632,11 +804,29 @@
 				expanded: state.expanded,
 				tripLevel: state.tripLevel,
 				accoType: state.accoType,
+				lang: state.lang,
 			}));
 
 		} catch ( e ) {
 			console.error( 'Save failed:', e );
 		}
+
+	}
+
+	function applyLang() {
+
+		const t = I18N[state.lang];
+
+		document.documentElement.lang = state.lang;
+		document.getElementById( 'appSubtitle' ).textContent = t.subtitle;
+		document.getElementById( 'installBanner' ).textContent = t.installHint;
+		document.getElementById( 'allDone' ).textContent = t.allDone;
+		document.getElementById( 'resetBtn' ).textContent = t.resetChecks;
+		document.getElementById( 'resetAllBtn' ).textContent = t.resetAll;
+
+		document.querySelectorAll( '.lang-btn' ).forEach( btn => {
+			btn.classList.toggle( 'active', btn.dataset.lang === state.lang );
+		});
 
 	}
 
@@ -674,6 +864,7 @@
 
 	function renderTripSelector() {
 
+		const t = I18N[state.lang];
 		const container = document.getElementById( 'tripSelector' );
 		container.innerHTML = '';
 
@@ -681,7 +872,7 @@
 
 			const btn = document.createElement( 'button' );
 			btn.className = 'trip-btn' + ( trip.level === state.tripLevel ? ' active' : '' );
-			btn.textContent = trip.label;
+			btn.textContent = t.tripTypes[trip.id];
 
 			btn.addEventListener( 'click', () => {
 
@@ -700,6 +891,7 @@
 
 	function renderAccoSelector() {
 
+		const t = I18N[state.lang];
 		const container = document.getElementById( 'accoSelector' );
 		container.innerHTML = '';
 
@@ -707,7 +899,7 @@
 
 			const btn = document.createElement( 'button' );
 			btn.className = 'trip-btn' + ( acco.id === state.accoType ? ' active' : '' );
-			btn.textContent = acco.label;
+			btn.textContent = t.accoTypes[acco.id];
 
 			btn.addEventListener( 'click', () => {
 
@@ -726,6 +918,7 @@
 
 	function render() {
 
+		const t = I18N[state.lang];
 		const container = document.getElementById( 'categoryList' );
 		container.innerHTML = '';
 
@@ -742,7 +935,7 @@
 			const header = document.createElement( 'div' );
 			header.className = 'cat-header';
 			header.innerHTML = `
-				<span class="cat-title">${cat.title}</span>
+				<span class="cat-title">${getCatTitle( cat )}</span>
 				<span class="cat-badge${catDone ? ' done' : ''}">${catChecked}/${items.length}</span>
 				<span class="cat-chevron${isOpen ? ' open' : ''}">▶</span>
 			`;
@@ -776,8 +969,8 @@
 							<path d="M3 7.5L5.5 10L11 4" stroke="#1a1d23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 						</svg>
 					</div>
-					<span class="item-text${isChecked ? ' done' : ''}">${item.text}</span>
-					<button class="item-delete" aria-label="Löschen">×</button>
+					<span class="item-text${isChecked ? ' done' : ''}">${getItemText( item )}</span>
+					<button class="item-delete" aria-label="${t.deleteLabel}">×</button>
 				`;
 
 				row.addEventListener( 'click', ( e ) => {
@@ -811,7 +1004,7 @@
 
 			const addBtn = document.createElement( 'button' );
 			addBtn.className = 'add-btn';
-			addBtn.textContent = '+ Hinzufügen';
+			addBtn.textContent = t.addBtn;
 
 			addBtn.addEventListener( 'click', () => {
 
@@ -820,7 +1013,7 @@
 				const input = document.createElement( 'input' );
 				input.className = 'add-input';
 				input.type = 'text';
-				input.placeholder = 'Neuer Eintrag...';
+				input.placeholder = t.addPlaceholder;
 
 				const confirm = document.createElement( 'button' );
 				confirm.className = 'add-confirm';
@@ -867,10 +1060,26 @@
 
 	}
 
+	// Language switch
+	document.getElementById( 'langSwitch' ).addEventListener( 'click', ( e ) => {
+
+		const btn = e.target.closest( '.lang-btn' );
+		if ( ! btn ) return;
+
+		state.lang = btn.dataset.lang;
+		saveState();
+		applyLang();
+		renderTripSelector();
+		renderAccoSelector();
+		render();
+
+	});
+
 	// Reset checks only
 	document.getElementById( 'resetBtn' ).addEventListener( 'click', () => {
 
-		if ( ! confirm( 'Alle Haken zurücksetzen?' ) ) return;
+		const t = I18N[state.lang];
+		if ( ! confirm( t.confirmReset ) ) return;
 
 		state.checked = {};
 		state.categories.forEach( c => state.expanded[c.id] = true );
@@ -882,7 +1091,8 @@
 	// Full reset including custom items
 	document.getElementById( 'resetAllBtn' ).addEventListener( 'click', () => {
 
-		if ( ! confirm( 'Komplett zurücksetzen? Eigene Einträge gehen verloren.' ) ) return;
+		const t = I18N[state.lang];
+		if ( ! confirm( t.confirmResetAll ) ) return;
 
 		state.categories = JSON.parse( JSON.stringify( DEFAULT_CATEGORIES ) );
 		state.checked = {};
@@ -894,6 +1104,7 @@
 
 	// Init
 	loadState();
+	applyLang();
 	renderTripSelector();
 	renderAccoSelector();
 	render();
